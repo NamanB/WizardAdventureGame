@@ -9,13 +9,24 @@ import java.util.List;
 import javax.imageio.ImageIO;
 
 import ca.vanzeben.game.Game;
+import ca.vanzeben.game.entities.Bullet;
+import ca.vanzeben.game.entities.Coin;
+import ca.vanzeben.game.entities.Entity;
+import ca.vanzeben.game.entities.MovingEntity;
 import ca.vanzeben.game.entities.Player;
+import ca.vanzeben.game.entities.PopStar;
+import ca.vanzeben.game.entities.Tower;
+import ca.vanzeben.game.entities.Wumpus;
 import ca.vanzeben.game.gfx.Screen;
+import ca.vanzeben.game.gfx.SpriteSheet;
 import ca.vanzeben.game.level.tiles.Tile;
 
 public class Level {
 	private static final int originalTileSize = 30;		// from sprite sheet
 	private static final int scaleFactor = 2;         // how much to scale the tiles up for display
+	public static final int MAX_COINS = 500;
+	private static final int MIN_ENEMIES = 30;
+	public static final int MAX_TOWERS = 7;
 	
 	public static final int tileSize = originalTileSize*scaleFactor; // each pixel in game ends up
 																								 									 // being this large
@@ -25,10 +36,19 @@ public class Level {
 	private int levelImageHeight;
 	private String imagePath;
 	private BufferedImage levelSourceimage;
-
+	
 	private Player player;
-
+	private ArrayList<Entity> entities;
+	
+	public Coin DEFAULT_COIN = new Coin(0, 0, 0, this, 0);
+	public Wumpus DEFAULT_WUMPUS = Wumpus.makeFriendlyWumpus(0, 0, 0, "", this, 0);
+	public Bullet DEFAULT_BULLET = new Bullet(0, 0, 0, this, 0, 0, 0, 0,0);
+	public PopStar DEFAULT_POPSTAR = new PopStar(0, 0, 0, this, 0);
+	public Tower DEFAULT_TOWER = new Tower(0, 0, this, 0, 0, 0);
+	
 	public Level(String imagePath) {
+		entities = new ArrayList<Entity>();
+		
 		if (imagePath != null) {
 			this.imagePath = imagePath;
 			this.loadLevelFromFile();
@@ -39,6 +59,94 @@ public class Level {
 			this.generateLevel();
 		}
 
+	}
+	
+	public int getNumEntites() {
+		if (entities == null)
+			return 0;
+		return entities.size();
+	}
+	
+//	public int getNumCoins() {
+//		int coinCount = 0; 
+//		
+//		for (Entity e : entities)
+//			if (e instanceof Coin)
+//				coinCount++;
+//		
+//		return coinCount;
+//	}
+	
+	public int getNumEntity(Entity entity) {
+		int count = 0; 
+		
+		for (Entity e : entities)
+			if (e.getClass() == entity.getClass())
+				count++;
+		
+		return count;
+	}
+	
+	public int getPlayerXCoord() {
+		return player.getX();
+	}
+	
+	public int getPlayerYCoord() {
+		return player.getY();
+	}
+	
+	public Player getPlayer() {
+		return player;
+	}
+	
+	public boolean isVisibleToPlayer(Entity entity) {
+		if (Math.abs(this.getPlayerXCoord() - entity.getX()) <= this.getLevelImageWidth() * 8
+				&& Math.abs(this.getPlayerYCoord() - entity.getY()) <= this.getLevelImageHeight() * 7)
+			return true;
+		return false;
+	}
+	
+	public void addWumpus(int x, int y, int speed) {
+		entities.add(Wumpus.makeFriendlyWumpus(x, y, speed, this, 1.75));
+	}
+	
+	public void addTower(int x, int y, int bulletDamage, int bulletFireDelay) {
+		entities.add(new Tower(x, y, this, 1.5, 10, 50, this.player, true));
+	}
+	
+	public void addFriendlyTower(int x, int y, int bulletDamage, int bulletFireDelay) {
+		entities.add(new Tower(x, y, this, 1.5, 10, 50));
+	}
+	
+	public void addBullet(int x, int y, int speed, double scale, int damage, int range, int targetX, int targetY) {
+		entities.add(new Bullet(x, y, speed, this, scale, damage, range, targetX, targetY));
+	}
+	
+	public void addBullet(int x, int y, int speed, double scale, int damage, int range, Entity target) {
+		entities.add(new Bullet(x, y, speed, this, scale, damage, range, target));
+	}
+	
+	public void addWizardBullet(int speed, double scale, int damage, int range, int targetX, int targetY) {
+		entities.add(new Bullet(player.getX(), player.getY(), speed, this, scale, damage, range, 
+				targetX, targetY, SpriteSheet.characterSheet, 7, 6));
+	}
+	
+	public void addPopStar(int x, int y, int speed) {
+		entities.add(new PopStar(x, y, speed, this, 1.75));
+	}
+	
+	/***
+	 * Creates new Coin instance at world coordinates x, y.
+	 * 
+	 * @param x world coordinate x
+	 * @param y world coordinate y
+	 */
+	public void addCoin(int x, int y, int value){
+		entities.add(new Coin(x,y, value, this, 1));
+	}
+	
+	public void addCoin(int x, int y, int value, double scale){
+		entities.add(new Coin(x,y, value, this, scale));
 	}
 
 	private void loadLevelFromFile() {
@@ -101,8 +209,41 @@ public class Level {
 	 */
 	public void tick() {
 		// Run tick() for all entities
-		player.tick();
-
+		
+		for (int i = 0; i < entities.size(); i++) {
+			Entity entity = entities.get(i);
+			entity.tick();
+			if (player.isHitting(entity))
+				player.handleCollision(entity);
+			if (player.checkFight(entity)) 
+				player.burst(entity);
+			if (!entity.isAlive()) {
+				if (entity instanceof Player) {
+					if (!player.isInvinvible()) {
+						player.respawn();
+						player.setAlive(true);
+//					} else {
+//						player.setAlive(true);
+					}
+				}
+				else {
+					entities.remove(i); 
+				}
+			}
+			for (int j = i; j < entities.size(); j++) {
+				Entity entity2 = entities.get(j);
+				if ((entity instanceof Bullet || entity2 instanceof Bullet) && entity.isHitting(entity2)) {
+					Bullet bulletEntity = entity instanceof Bullet ? (Bullet) entity : (Bullet) entity2;
+					Entity other = entity2 instanceof Bullet ? entity : entity2;
+					
+					bulletEntity.handleCollision(other);
+				}
+			}
+		}
+		
+		while (getNumEntity(this.DEFAULT_POPSTAR) < MIN_ENEMIES) {
+			this.addPopStar(getRandXCoord(), getRandYCoord(), MovingEntity.getRandSpeed(this.player.getSpeed())+1);
+		}
 		// Run tick() for all tiles
 		for (Tile t : Tile.tiles) {
 			if (t == null) {
@@ -123,7 +264,10 @@ public class Level {
 	}
 
 	public void renderEntities(Screen screen) {
-		player.render(screen);
+		for (Entity entity : entities)
+			entity.render(screen);
+		
+//		player.render(screen);
 	}
 
 	public Tile getTileTypeAtWorldCoordinates(int x, int y) {
@@ -149,6 +293,7 @@ public class Level {
 
 	public void addPlayer(Player player) {
 		this.player = player;
+		entities.add(player);
 	}
 
 	/***
@@ -195,5 +340,13 @@ public class Level {
 
 	public int getTileDisplaySize() {
 		return this.tileSize;
+	}
+	
+	public int getRandXCoord() {
+		return (int)(Math.random() * (this.getLevelWidth()-3));
+	}
+	
+	public int getRandYCoord() {
+		return (int)(Math.random() * (this.getLevelHeight()-3));
 	}
 }

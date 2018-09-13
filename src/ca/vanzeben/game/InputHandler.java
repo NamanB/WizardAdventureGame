@@ -38,6 +38,8 @@ public class InputHandler implements KeyListener, MouseMotionListener {
 	public Key down = new Key();
 	public Key left = new Key();
 	public Key right = new Key();
+	public Key x = new Key();
+	public Key f = new Key();
 
 	public void keyPressed(KeyEvent e) {
 		toggleKey(e.getKeyCode(), true);
@@ -63,12 +65,18 @@ public class InputHandler implements KeyListener, MouseMotionListener {
 		if (keyCode == KeyEvent.VK_D || keyCode == KeyEvent.VK_RIGHT) {
 			right.toggle(isPressed);
 		}
+		if (keyCode == KeyEvent.VK_X) {
+			x.toggle(isPressed);
+		}
+		if (keyCode == KeyEvent.VK_F) {
+			f.toggle(isPressed);
+		}
 	}
 
 	@Override
 	public void mouseDragged(MouseEvent arg0) {
 		// TODO Auto-generated method stub
-
+		
 	}
 
 	@Override

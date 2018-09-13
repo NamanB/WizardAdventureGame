@@ -21,7 +21,9 @@ public abstract class Tile {
 
 	public static final Tile WATER = new AnimatedTile(SpriteSheet.tileSheet,
 			new int[][] { { 9, 0 }, { 0, 1 } }, 0xFF0000FF, 1000);
-
+	public static final Tile WHALE = new BasicTile(SpriteSheet.tileSheet, 6, 18, 0x99FF8833);
+	
+	
 	protected int id;
 	protected ArrayList<Loc> imageLocLayers;
 	protected boolean solid;

@@ -358,4 +358,18 @@ public class Screen {
 		this.graphicsContext.drawOval(x1, y1, width, height);
 		this.graphicsContext.setColor(DEFAULT_COLOR);
 	}
+	
+	public void drawBox(int x1, int y1, int width, int height, Color c, Color fill) {
+		this.graphicsContext.setColor(c);
+		this.graphicsContext.drawRect(x1, y1, width, height);
+		this.graphicsContext.setColor(fill);
+		this.graphicsContext.fillRect(x1, y1, width, height);
+	}
+	
+	public void drawRoundBox(int x1, int y1, int width, int height, int arcWidth, int arcHeight, Color c, Color fill) {
+		this.graphicsContext.setColor(c);
+		this.graphicsContext.drawRoundRect(x1, y1, width, height, arcWidth, arcHeight);
+		this.graphicsContext.setColor(fill);
+		this.graphicsContext.fillRoundRect(x1, y1, width, height, arcWidth, arcHeight);
+	}
 }

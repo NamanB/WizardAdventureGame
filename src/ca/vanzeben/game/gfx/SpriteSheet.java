@@ -14,7 +14,10 @@ public class SpriteSheet {
 
 	public static final SpriteSheet tileSheet = new SpriteSheet("tiles",
 			"/tilesheet.png", 19, 20);
-
+	
+	public static final SpriteSheet entitySheet = new SpriteSheet("characters", 
+			"/characters.png", 8,12);
+	
 	private String name;
 	private String path;
 	private int pixelWidth;

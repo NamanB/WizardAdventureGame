@@ -10,6 +10,7 @@ import java.awt.image.DataBufferInt;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
+import ca.vanzeben.game.entities.MovingEntity;
 import ca.vanzeben.game.entities.Player;
 import ca.vanzeben.game.gfx.Font;
 import ca.vanzeben.game.gfx.Screen;
@@ -25,8 +26,7 @@ public class Game extends Canvas implements Runnable {
 	public static final int SCALE = 1;
 
 	public static final String NAME = "Game";
-	public static final Dimension DIMENSIONS = new Dimension(SCREEN_WIDTH * SCALE,
-			SCREEN_HEIGHT * SCALE);
+	public static final Dimension DIMENSIONS = new Dimension(SCREEN_WIDTH * SCALE, SCREEN_HEIGHT * SCALE);
 
 	private Thread thread;
 	private WindowHandler windowHandler;
@@ -41,8 +41,9 @@ public class Game extends Canvas implements Runnable {
 	private int tickCount = 0;
 
 	private Player player;
+	private int playerSpeed = 8;
 
-	public boolean debug = false;
+	private boolean debug = false;
 	public boolean isApplet = false;
 
 	public void init() {
@@ -55,11 +56,49 @@ public class Game extends Canvas implements Runnable {
 		level = new Level("/levels/water_test_level.png");
 		level.setTileAt(3, 3, Tile.STONE);
 		level.setTileAt(10, 2, Tile.GRASS2);
-
-		player = new Player(level, 100, 100, input,
-				JOptionPane.showInputDialog(this, "Please enter a username"),
-				SpriteSheet.characterSheet);
+		level.setTileAt(20, 20, Tile.WHALE);
+		
+		player = new Player(level, 100, 100, playerSpeed, input,
+				JOptionPane.showInputDialog(this, "Please enter a username"), SpriteSheet.characterSheet, 1);
 		level.addPlayer(player);
+
+		for (int i = 0; i < 20; i++) {
+			level.setTileAt(level.getRandXCoord()/level.getTileDisplaySize(), 
+					level.getRandYCoord()/level.getTileDisplaySize(), Tile.STONE);
+		}
+
+		
+		for (int i = 0; i < 100; i++) {
+			int chance = (int) (Math.random() * 4);
+			int randValue = (int) (Math.random() * 100) + 1;
+			int maxSpeed = MovingEntity.getRandSpeed(player.getSpeed() - 2);
+			switch (chance) {
+
+			case 1:
+				level.addPopStar(level.getRandXCoord(), level.getRandYCoord(), maxSpeed);
+				break;
+			case 2:
+				level.addWumpus(level.getRandXCoord(), level.getRandYCoord(), maxSpeed);
+				break;
+			case 3:
+				if (level.getNumEntity(level.DEFAULT_TOWER) < level.MAX_TOWERS)
+					level.addTower(level.getRandXCoord(), level.getRandYCoord(), 10, 500);
+				else 
+					level.addCoin(level.getRandXCoord(), level.getRandYCoord(), randValue);
+			default:
+				level.addCoin(level.getRandXCoord(), level.getRandYCoord(), randValue);
+			}
+		}
+
+		level.addCoin(5 * 16, 5 * 16, 3);
+		level.addCoin(5 * 16, 6 * 16, 10);
+		level.addWumpus(500, 1000, 3);
+		level.addWumpus(50, 50, 3);
+		level.addWumpus(800, 200, 3);
+		level.addWumpus(900, 900, 3);
+		level.addPopStar(200, 50, 5);
+		level.addTower(1000, 100, 10, 500);
+
 	}
 
 	public synchronized void start() {
@@ -94,7 +133,7 @@ public class Game extends Canvas implements Runnable {
 		while (running) {
 			long now = System.nanoTime();
 			gameStepsToRun += (now - lastTime) / nsPerTick;
-			
+
 			lastTime = now;
 			boolean shouldRender = true;
 
@@ -116,7 +155,8 @@ public class Game extends Canvas implements Runnable {
 				render();
 			}
 
-			// if one second has passed, display frames per second (for informational purposes)
+			// if one second has passed, display frames per second (for
+			// informational purposes)
 			if (System.currentTimeMillis() - lastTimer >= 1000) {
 				lastTimer += 1000;
 				debug(DebugLevel.INFO, ticks + " ticks, " + frames + " frames");
@@ -132,6 +172,18 @@ public class Game extends Canvas implements Runnable {
 	public void tick() {
 		tickCount++;
 		level.tick();
+		if (level.getPlayer().getBling() > 5000) {
+			render();
+			JOptionPane pane = new JOptionPane();
+			pane.showMessageDialog(pane, "YOU WIN!");
+			this.stop();
+		}
+		if (level.getPlayer().getDeathCount() >= 10) {
+			render();
+			JOptionPane pane = new JOptionPane();
+			pane.showMessageDialog(pane, "YOU LOSE!");
+			this.stop();
+		}
 	}
 
 	/***
@@ -146,7 +198,7 @@ public class Game extends Canvas implements Runnable {
 
 		Graphics g = bs.getDrawGraphics();
 		screen.reset(); // You must call this BEFORE you render
-										// anything!
+						// anything!
 
 		// Set screen position centered on player
 		int screenX = player.x() - (screen.getWidth() / 2);
@@ -167,12 +219,17 @@ public class Game extends Canvas implements Runnable {
 		level.renderEntities(screen);
 
 		String msg = "Wizard Adventure";
-		screen.renderTextAtScreenCoordinates(msg, Font.DEFAULT,
-				screen.getWidth() - Font.DEFAULT.getWidthOf(msg) * 3, 10, 3);
-
+		screen.renderTextAtScreenCoordinates(msg, Font.DEFAULT, screen.getWidth() - Font.DEFAULT.getWidthOf(msg) * 3,
+				10, 3);
+		
+		screen.renderTextAtScreenCoordinates("Bling " + player.getBling(), Font.DEFAULT, screen.getWidth() - 
+				(Font.DEFAULT.getWidthOf(msg)*2),50, 2);
+		
+		screen.renderTextAtScreenCoordinates("Bankruptcies: " + player.getDeathCount(), Font.DEFAULT, screen.getWidth() - 
+				(Font.DEFAULT.getWidthOf(msg)*2),80, 2);
+		
 		if (debug) {
-			screen.highlightTileAtScreenCoordinates(screen.getMouseX(),
-					screen.getMouseY(), level.getTileDisplaySize());
+			screen.highlightTileAtScreenCoordinates(screen.getMouseX(), screen.getMouseY(), level.getTileDisplaySize());
 			screen.displayMouseCoordinatesAtMouse();
 			screen.displayPixelScale(50);
 		}

@@ -40,17 +40,17 @@ public class BasicTile extends Tile {
 	/***
 	 * Constructor for basic tile
 	 * 
-	 * @param x
+	 * @param row
 	 *          x coordinate for tile in sprite sheet. NOTE: not pixel coordinate.
 	 *          If tile is the 3rd, tile over, x should be 2 (since tiles are
 	 *          numbered starting at 0)
-	 * @param y
+	 * @param column
 	 *          y coordinate for tile in sprite sheet. (See note above)
 	 * @param levelColour
 	 *          color this tile will be represented by in level image.
 	 */
-	public BasicTile(SpriteSheet sheet, int x, int y, int levelColour) {
-		this(sheet, Loc.asList(x, y), levelColour);
+	public BasicTile(SpriteSheet sheet, int row, int column, int levelColour) {
+		this(sheet, Loc.asList(row, column), levelColour);
 	}
 
 	public void tick() {
